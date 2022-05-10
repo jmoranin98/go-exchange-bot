@@ -1,14 +1,24 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-
-	"github.com/gocolly/colly/v2"
+	"net/http"
 )
 
 type CurrencyExchange struct {
 	Buy  string
 	Sell string
+}
+
+type kambistaResponse struct {
+	TC kambistaTC `json:"tc"`
+}
+
+type kambistaTC struct {
+	Bid float64 `json:"bid"`
+	Ask float64 `json:"ask"`
 }
 
 func (c *CurrencyExchange) GetFormattedMessage() string {
@@ -20,28 +30,29 @@ func (c *CurrencyExchange) GetFormattedMessage() string {
 	`, c.Sell, c.Buy)
 }
 
-func ScrapeExchange() (CurrencyExchange, error) {
+func ScrapeExchange() (*CurrencyExchange, error) {
 	return scrapeKambista()
 }
 
-func scrapeKambista() (CurrencyExchange, error) {
-	fmt.Println("scraping kambista.com")
-	baseURL := "https://kambista.com/"
-	exchange := CurrencyExchange{}
+func scrapeKambista() (*CurrencyExchange, error) {
+	var kambistaRes kambistaResponse
 
-	c := colly.NewCollector()
+	apiURL := "https://api.kambista.com/v1/exchange/calculates?originCurrency=USD&destinationCurrency=PEN&amount=1&active=S"
+	res, err := http.Get(apiURL)
 
-	c.OnHTML("strong[id=valcompra]", func(e *colly.HTMLElement) {
-		text := e.Text
-		exchange.Buy = text
-	})
+	if err != nil {
+		return nil, errors.New("cannot get kambista exchange")
+	}
 
-	c.OnHTML("strong[id=valventa]", func(e *colly.HTMLElement) {
-		text := e.Text
-		exchange.Sell = text
-	})
+	defer res.Body.Close()
 
-	c.Visit(baseURL)
+	err = json.NewDecoder(res.Body).Decode(&kambistaRes)
+	if err != nil {
+		return nil, err
+	}
 
-	return exchange, nil
+	return &CurrencyExchange{
+		Buy:  fmt.Sprintf("%v", kambistaRes.TC.Bid),
+		Sell: fmt.Sprintf("%v", kambistaRes.TC.Ask),
+	}, nil
 }

@@ -21,9 +21,11 @@ func main() {
 		panic("Cannot load members chat ids")
 	}
 
+	fmt.Println(BOT_TOKEN)
 	bot, err := NewTelegramBot(BOT_TOKEN)
 
 	if err != nil {
+		fmt.Println("error creating telegram bot")
 		panic(err)
 	}
 
