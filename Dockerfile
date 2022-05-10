@@ -1,4 +1,4 @@
-FROM go:1.16-alpine
+FROM golang:1.16-alpine
 WORKDIR /app
 RUN touch members.txt
 
